@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ekonomisk Budgetanalys</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        #container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        #header {
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            z-index: 100;
+        }
+        
+        h1 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        #controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        select, input[type="file"], button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: white;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        #main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        #sidebar {
+            width: 320px;
+            background-color: white;
+            box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            overflow-y: auto;
+        }
+                #visualization {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+            position: relative;
+        }
+        
+        #tree-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            min-height: 600px;
+        }
+        
+        .summary-card {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-card h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        
+        .amount-positive {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .amount-negative {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .amount-unit {
+            font-size: 11px;
+            color: #666;
+            font-weight: normal;
+        }
+        
+        /* Förklaringsruta */
+        .info-box {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        
+        .info-box h4 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #1976d2;
+        }
+        
+        .info-box ul {
+            list-style: none;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+        
+        .info-box .color-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        
+        .category-list {
+            margin-top: 20px;
+        }
+        
+        .category-item {
+            padding: 12px;
+            margin: 8px 0;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .category-item:hover {
+            background-color: #e9ecef;
+            border-color: #dee2e6;
+        }
+        
+        .category-item.selected {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+        
+        /* Förbättrad trädvy */
+        .node {
+            cursor: pointer;
+        }
+        
+        .node circle {
+            fill: #fff;
+            stroke-width: 3px;
+        }
+        
+        .node text {
+            font: 13px sans-serif;
+            text-shadow: 0 1px 0 #fff, 0 -1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff;
+        }
+        
+        .node-rect {
+            rx: 6;
+            ry: 6;
+        }
+        
+        .link {
+            fill: none;
+            stroke: #ccc;
+            stroke-width: 2px;
+        }
+        
+        .tooltip {
+            position: absolute;
+            text-align: left;
+            padding: 12px;
+            font: 13px sans-serif;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            border: 0px;
+                        border-radius: 8px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            max-width: 350px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        
+        .tooltip-row {
+            margin: 4px 0;
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        
+        .tooltip-label {
+            font-weight: normal;
+            color: #ccc;
+        }
+        
+        .tooltip-value {
+            font-weight: bold;
+            text-align: right;
+        }
+        
+        /* Förklaringsmodal */
+        .help-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        
+        .help-button:hover {
+            background-color: #1976d2;
+        }
+        
+        #loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0,0,0,0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            z-index: 1000;
+        }
+        
+        /* Förbättrad nodstil för trädet */
+        .node-group {
+            transition: opacity 0.3s;
+        }
+        
+        .node-group:hover {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">Laddar data...</div>
+    
+    <div id="container">
+        <div id="header">
+            <h1>Ekonomisk Budgetanalys</h1>
+            <div id="controls">
+                <div class="control-group">
+                    <label for="file-input">Välj CSV-fil:</label>
+                    <input type="file" id="file-input" accept=".csv">
+                </div>
+                <div class="control-group">
+                    <label for="year-select">År:</label>
+                    <select id="year-select">
+                        <option value="all">Alla år</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <button id="example-btn">Ladda exempeldata</button>
+                    <button id="reset-view">Återställ vy</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="main-content">
+            <div id="sidebar">
+                <div class="info-box">
+                    <h4>📊 Så tolkar du informationen</h4>
+                    <ul>
+                        <li><span class="color-indicator" style="background-color: #27ae60;"></span><strong>Grönt</strong> = Positiva belopp (intäkter/anslag)</li>
+                                                <li><span class="color-indicator" style="background-color: #e74c3c;"></span><strong>Rött</strong> = Negativa belopp (kostnader/utgifter)</li>
+                        <li><span class="color-indicator" style="background-color: #3498db;"></span><strong>Blått</strong> = Huvudkategorier</li>
+                    </ul>
+                    <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
+                    <ul>
+                        <li><strong>Belopp:</strong> Faktiskt använt belopp (miljoner kr)</li>
+                        <li><strong>Anvisad:</strong> Budgeterat/tilldelat belopp</li>
+                        <li><strong>Totalt:</strong> Total tillgänglig budget</li>
+                        <li><strong>Utgift:</strong> Faktisk kostnad/förbrukning</li>
+                    </ul>
+                    <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
+                    <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                        <strong>OBS:</strong> Alla belopp visas i miljoner kronor. 
+                        Poster med 0 kr kan indikera ej påbörjade projekt eller balansposter.
+                    </p>
+                </div>
+                
+                <div class="summary-card" id="summary">
+                    <h3>Sammanfattning</h3>
+                    <div class="summary-content"></div>
+                </div>
+                
+                <div class="category-list" id="category-list">
+                    <h3>Kategorier</h3>
+                    <div id="categories"></div>
+                </div>
+            </div>
+            
+            <div id="visualization">
+                <div id="tree-container">
+                     <div class="zoom-controls">
+                           <button id="zoom-in" title="Zooma in">+</button>
+                           <button id="zoom-out" title="Zooma ut">-</button>
+                           <button id="zoom-fit" title="Anpassa zoom">⤢</button>
+                    </div>
+            </div>
+        </div>
+    </div>
+    
+    <button class="help-button" title="Hjälp">?</button>
+    <div class="tooltip"></div>
+
+    <script>
+        // Global variabler
+        let allData = [];
+        let currentData = [];
+        let selectedCategory = null;
+        let tooltip = d3.select(".tooltip");
+        let hasHeaders = false;
+        
+        // Förbättrad CSV-parser som hanterar headers
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            const data = [];
+            let startIndex = 0;
+            
+            // Kontrollera om första raden är headers
+            const firstLine = lines[0].split(';');
+            if (isNaN(parseFloat(firstLine[0]))) {
+                hasHeaders = true;
+                startIndex = 1;
+            }
+            
+            for (let i = startIndex; i < lines.length; i++) {
+                const parts = lines[i].split(';');
+                if (parts.length >= 6) {
+                    // Funktion för säker parsning av nummer
+                    const parseNumber = (str) => {
+                        if (!str || str.trim() === '') return 0;
+                        return parseFloat(str.replace(',', '.').replace(/\s/g, '')) || 0;
+                    };
+                    
+                    data.push({
+                        huvudgruppKod: parts[0],
+                        huvudgrupp: parts[1],
+                        anslagsnummer: parts[2],
+                        anslagsnamn: parts[3],
+                                                år: parseInt(parts[4]) || 0,
+                        belopp: parseNumber(parts[5]),
+                        anvisad: parseNumber(parts[6]),
+                        ingåendeÖverföringsbelopp: parseNumber(parts[7]),
+                        indragning: parseNumber(parts[8]),
+                        utgåendeÖverföringsbelopp: parseNumber(parts[9]),
+                        totalt: parseNumber(parts[10]),
+                        utnyttjande: parseNumber(parts[11]),
+                        utgift: parseNumber(parts[12])
+                    });
+                }
+            }
+            
+            return data;
+        }
+        
+        // Formatera belopp med miljoner kronor
+        function formatAmount(amount) {
+            if (isNaN(amount) || amount === 0) return '0,00';
+            return new Intl.NumberFormat('sv-SE', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(amount);
+        }
+        
+        // Formatera med enhet
+        function formatWithUnit(amount) {
+            return formatAmount(amount) + ' <span class="amount-unit">miljoner kr</span>';
+        }
+        
+        // Uppdatera årväljaren
+        function updateYearSelector(data) {
+            const years = [...new Set(data.map(d => d.år))].sort((a, b) => b - a);
+            const yearSelect = document.getElementById('year-select');
+            
+            yearSelect.innerHTML = '<option value="all">Alla år</option>';
+            years.forEach(year => {
+                if (year > 0) {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    yearSelect.appendChild(option);
+                }
+            });
+        }
+        
+        // Visa sammanfattning
+        function showSummary(data) {
+            const totalBelopp = data.reduce((sum, item) => sum + (item.belopp || 0), 0);
+            const totalAnvisad = data.reduce((sum, item) => sum + (item.anvisad || 0), 0);
+            const totalUtgift = data.reduce((sum, item) => sum + (item.utgift || 0), 0);
+            const positiveCount = data.filter(item => item.belopp > 0).length;
+            const negativeCount = data.filter(item => item.belopp < 0).length;
+            const zeroCount = data.filter(item => item.belopp === 0).length;
+            const categories = [...new Set(data.map(d => d.huvudgrupp))];
+            
+            const summaryHtml = `
+                <div class="summary-item">
+                    <span>Antal poster:</span>
+                    <span><strong>${data.length}</strong></span>
+                </div>
+                <div class="summary-item">
+                    <span>Positiva poster:</span>
+                    <span class="amount-positive">${positiveCount}</span>
+                </div>
+                <div class="summary-item">
+                    <span>Negativa poster:</span>
+                    <span class="amount-negative">${negativeCount}</span>
+                </div>
+                <div class="summary-item">
+                    <span>Nollposter:</span>
+                    <span>${zeroCount}</span>
+                </div>
+                <hr style="margin: 10px 0; border: none; border-top: 1px solid #eee;">
+                <div class="summary-item">
+                    <span>Total belopp:</span>
+                    <span class="${totalBelopp >= 0 ? 'amount-positive' : 'amount-negative'}">${formatWithUnit(totalBelopp)}</span>
+                </div>
+                <div class="summary-item">
+                    <span>Total anvisad:</span>
+                    <span>${formatWithUnit(totalAnvisad)}</span>
+                </div>
+                <div class="summary-item">
+                    <span>Total utgift:</span>
+                    <span>${formatWithUnit(totalUtgift)}</span>
+                </div>
+                <div class="summary-item">
+                    <span>Antal kategorier:</span>
+                    <span><strong>${categories.length}</strong></span>
+                                </div>
+            `;
+            
+            document.querySelector('.summary-content').innerHTML = summaryHtml;
+        }
+        
+        // Visa kategorilista
+        function showCategories(data) {
+            const categories = {};
+            data.forEach(item => {
+                if (!categories[item.huvudgrupp]) {
+                    categories[item.huvudgrupp] = {
+                        name: item.huvudgrupp,
+                        count: 0,
+                        totalBelopp: 0,
+                        totalAnvisad: 0
+                    };
+                }
+                categories[item.huvudgrupp].count++;
+                categories[item.huvudgrupp].totalBelopp += item.belopp || 0;
+                categories[item.huvudgrupp].totalAnvisad += item.anvisad || 0;
+            });
+            
+            const categoriesDiv = document.getElementById('categories');
+            categoriesDiv.innerHTML = '';
+            
+            Object.values(categories).forEach(cat => {
+                const div = document.createElement('div');
+                div.className = 'category-item';
+                div.innerHTML = `
+                    <strong>${cat.name}</strong><br>
+                    <small>${cat.count} poster | ${formatAmount(cat.totalBelopp)} mkr</small>
+                `;
+                div.onclick = () => filterByCategory(cat.name);
+                categoriesDiv.appendChild(div);
+            });
+        }
+        
+        // Filtrera efter kategori
+        function filterByCategory(categoryName) {
+            if (selectedCategory === categoryName) {
+                selectedCategory = null;
+                updateVisualization();
+            } else {
+                selectedCategory = categoryName;
+                updateVisualization();
+            }
+            
+            // Uppdatera markering
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.classList.remove('selected');
+                if (item.querySelector('strong').textContent === categoryName && selectedCategory) {
+                    item.classList.add('selected');
+                }
+            });
+        }
+        
+        // Skapa förbättrad trädvisualisering
+        function createTreeView(data) {
+            const container = d3.select("#tree-container");
+            container.selectAll("svg").remove();
+            
+            const width = container.node().offsetWidth - 40;
+            const height = Math.max(600, data.length * 40);
+            const margin = {top: 40, right: 250, bottom: 40, left: 150};
+            
+            const svg = container.append("svg")
+                .attr("width", width)
+                .attr("height", height);
+            
+            const g = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+            
+            // Bygg hierarkisk struktur
+            const hierarchy = buildHierarchy(data);
+            const root = d3.hierarchy(hierarchy);
+            
+            // Beräkna layout med mer utrymme
+            const treeLayout = d3.tree()
+                .size([height - margin.top - margin.bottom, width - margin.left - margin.right])
+                .separation((a, b) => a.parent === b.parent ? 1.5 : 2);
+            
+            treeLayout(root);
+            
+            // Rita länkar
+            const link = g.selectAll(".link")
+                .data(root.links())
+                .enter().append("path")
+                .attr("class", "link")
+                .attr("d", d3.linkHorizontal()
+                    .x(d => d.y)
+                    .y(d => d.x));
+            
+            // Rita noder
+            const node = g.selectAll(".node")
+                .data(root.descendants())
+                .enter().append("g")
+                .attr("class", "node-group")
+                .attr("transform", d => `translate(${d.y},${d.x})`);
+            
+            // Lägg till cirklar med färger
+            node.append("circle")
+                .attr("r", d => d.children ? 8 : 6)
+                .style("fill", d => {
+                    if (d.depth === 0) return "#3498db";
+                    if (d.data.belopp !== undefined) {
+                        if (d.data.belopp === 0) return "#95a5a6";
+                        return d.data.belopp < 0 ? "#e74c3c" : "#27ae60";
+                    }
+                    return "#3498db";
+                })
+                .style("stroke", d => {
+                    if (d.depth === 0) return "#2980b9";
+                    if (d.data.belopp !== undefined) {
+                        if (d.data.belopp === 0) return "#7f8c8d";
+                        return d.data.belopp < 0 ? "#c0392b" : "#229954";
+                    }
+                    return "#2980b9";
+                });
+            
+            // Lägg till text med bättre positionering
+            node.append("text")
+                .attr("dy", ".35em")
+                .attr("x", d => d.children ? -12 : 12)
+                .style("text-anchor", d => d.children ? "end" : "start")
+                .style("font-size", d => d.depth === 0 ? "14px" : "13px")
+                .style("font-weight", d => d.depth === 0 ? "bold" : "normal")
+                .style("fill", "#333")
+                .text(d => {
+                    if (d.data.belopp !== undefined) {
+                        return `${d.data.name}: ${formatAmount(d.data.belopp)} mkr`;
+                    }
+                    return d.data.name;
+                })
+                .on("mouseover", function(event, d) {
+                    showTooltip(event, d);
+                })
+                .on("mouseout", () => {
+                    tooltip.style("opacity", 0);
+                });
+        }
+        
+        // Bygg hierarkisk struktur
+        function buildHierarchy(data) {
+            const root = {
+                name: "Budget",
+                children: []
+            };
+            
+            const groups = {};
+            
+            data.forEach(item => {
+                if (!groups[item.huvudgrupp]) {
+                    groups[item.huvudgrupp] = {
+                        name: item.huvudgrupp,
+                        children: [],
+                        totalBelopp: 0,
+                        totalAnvisad: 0,
+                        totalUtgift: 0
+                    };
+                    root.children.push(groups[item.huvudgrupp]);
+                }
+                
+                const child = {
+                    name: item.anslagsnamn,
+                    anslagsnummer: item.anslagsnummer,
+                    belopp: item.belopp,
+                    anvisad: item.anvisad,
+                    totalt: item.totalt,
+                    utgift: item.utgift,
+                    år: item.år
+                };
+                
+                groups[item.huvudgrupp].children.push(child);
+                                groups[item.huvudgrupp].totalBelopp += item.belopp || 0;
+                groups[item.huvudgrupp].totalAnvisad += item.anvisad || 0;
+                groups[item.huvudgrupp].totalUtgift += item.utgift || 0;
+            });
+            
+            return root;
+        }
+        
+        // Visa tooltip med förbättrad information
+        function showTooltip(event, d) {
+            tooltip.style("opacity", 1);
+            let html = `<strong style="font-size: 14px;">${d.data.name}</strong><br/><br/>`;
+            
+            if (d.data.belopp !== undefined) {
+                // Detaljerad information för enskilda poster
+                html += '<div class="tooltip-row">';
+                html += `<span class="tooltip-label">År:</span>`;
+                html += `<span class="tooltip-value">${d.data.år || 'N/A'}</span>`;
+                html += '</div>';
+                
+                html += '<div class="tooltip-row">';
+                html += `<span class="tooltip-label">Belopp:</span>`;
+                html += `<span class="tooltip-value" style="color: ${d.data.belopp < 0 ? '#ff6b6b' : '#51cf66'}">`;
+                html += `${formatAmount(d.data.belopp)} mkr</span>`;
+                html += '</div>';
+                
+                if (d.data.anvisad !== 0) {
+                    html += '<div class="tooltip-row">';
+                    html += `<span class="tooltip-label">Anvisad:</span>`;
+                    html += `<span class="tooltip-value">${formatAmount(d.data.anvisad)} mkr</span>`;
+                    html += '</div>';
+                }
+                
+                if (d.data.totalt !== 0) {
+                    html += '<div class="tooltip-row">';
+                    html += `<span class="tooltip-label">Totalt:</span>`;
+                    html += `<span class="tooltip-value">${formatAmount(d.data.totalt)} mkr</span>`;
+                    html += '</div>';
+                }
+                
+                if (d.data.utgift !== 0) {
+                    html += '<div class="tooltip-row">';
+                    html += `<span class="tooltip-label">Utgift:</span>`;
+                    html += `<span class="tooltip-value">${formatAmount(d.data.utgift)} mkr</span>`;
+                    html += '</div>';
+                }
+                
+                // Förklaring om 0 kr
+                if (d.data.belopp === 0) {
+                    html += '<hr style="margin: 8px 0; border: none; border-top: 1px solid #444;">';
+                    html += '<small style="color: #aaa;">0 kr kan indikera ej påbörjat projekt eller balanspost</small>';
+                }
+            } else if (d.data.totalBelopp !== undefined) {
+                // Information för kategorier
+                html += '<div class="tooltip-row">';
+                html += `<span class="tooltip-label">Total belopp:</span>`;
+                html += `<span class="tooltip-value" style="color: ${d.data.totalBelopp < 0 ? '#ff6b6b' : '#51cf66'}">`;
+                html += `${formatAmount(d.data.totalBelopp)} mkr</span>`;
+                html += '</div>';
+                
+                html += '<div class="tooltip-row">';
+                html += `<span class="tooltip-label">Total anvisad:</span>`;
+                                html += `<span class="tooltip-value">${formatAmount(d.data.totalAnvisad)} mkr</span>`;
+                html += '</div>';
+                
+                html += '<div class="tooltip-row">';
+                html += `<span class="tooltip-label">Antal poster:</span>`;
+                html += `<span class="tooltip-value">${d.data.children ? d.data.children.length : 0}</span>`;
+                html += '</div>';
+            }
+            
+            tooltip.html(html)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 28) + "px");
+        }
+        
+        // Uppdatera visualisering
+        function updateVisualization() {
+            const yearValue = document.getElementById('year-select').value;
+            
+            // Filtrera data
+            if (yearValue === 'all') {
+                currentData = allData;
+            } else {
+                currentData = allData.filter(d => d.år === parseInt(yearValue));
+            }
+            
+            // Filtrera efter kategori om vald
+            if (selectedCategory) {
+                currentData = currentData.filter(d => d.huvudgrupp === selectedCategory);
+            }
+            
+            // Uppdatera sammanfattning och kategorier
+            showSummary(currentData);
+            showCategories(yearValue === 'all' ? allData : allData.filter(d => d.år === parseInt(yearValue)));
+            
+            // Visa trädvy
+            if (currentData.length > 0) {
+                createTreeView(currentData);
+            } else {
+                d3.select("#tree-container").html('<p style="text-align: center; padding: 50px; color: #666;">Ingen data att visa för valt filter.</p>');
+            }
+        }
+        
+        // Event handlers
+        document.getElementById('file-input').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                document.getElementById('loading').style.display = 'block';
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const csvText = e.target.result;
+                        allData = parseCSV(csvText);
+                        
+                        if (allData.length === 0) {
+                            alert('Ingen data kunde läsas från filen.');
+                            return;
+                        }
+                        
+                        updateYearSelector(allData);
+                        currentData = allData;
+                        updateVisualization();
+                    } catch (error) {
+                        alert('Ett fel uppstod: ' + error.message);
+                        console.error(error);
+                    } finally {
+                        document.getElementById('loading').style.display = 'none';
+                    }
+                };
+                reader.readAsText(file, 'UTF-8');
+            }
+        });
+        
+        document.getElementById('year-select').addEventListener('change', updateVisualization);
+        
+        document.getElementById('reset-view').addEventListener('click', () => {
+            selectedCategory = null;
+            document.getElementById('year-select').value = 'all';
+            document.querySelectorAll('.category-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            updateVisualization();
+        });
+        
+        // Hjälpknapp
+        document.querySelector('.help-button').addEventListener('click', () => {
+            alert(`ANVÄNDARGUIDE\n\n` +
+                  `FÄRGKODER:\n` +
+                  `🟢 Grönt = Positiva belopp (intäkter/anslag)\n` +
+                  `🔴 Rött = Negativa belopp (kostnader/utgifter)\n` +
+                  `🔵 Blått = Huvudkategorier\n` +
+                  `⚪ Grått = Nollposter\n\n` +
+                  `BELOPPSTYPER:\n` +
+                  `• Belopp: Faktiskt använt belopp\n` +
+                  `• Anvisad: Budgeterat/tilldelat belopp\n` +
+                  `• Totalt: Total tillgänglig budget\n` +
+                                    `• Utgift: Faktisk kostnad/förbrukning\n\n` +
+                  `NOLLPOSTER:\n` +
+                  `Poster med 0 kr kan betyda:\n` +
+                  `- Ej påbörjade projekt\n` +
+                  `- Balansposter för bokföring\n` +
+                  `- Reserverade men ej använda medel\n\n` +
+                  `NAVIGERING:\n` +
+                  `• Hovra över poster för detaljinfo\n` +
+                  `• Klicka på kategorier i sidopanelen för filtrering\n` +
+                  `• Använd årsväljaren för tidsfiltrering\n` +
+                  `• Alla belopp visas i miljoner kronor`);
+        });
+        
+        // Exempeldata
+        document.getElementById('example-btn').addEventListener('click', () => {
+            const exampleCSV = `Utgiftsområde;Utgiftsområdesnamn;Anslagsnummer;Anslagsnamn;År;Utfall;Anvisad budget;Ingående överföringsbelopp;Indragning;Utgående överföringsbelopp;Totalt disponibelt;Utnyttjande;Utgift
+22;Kommunikationer;2201011;Trängselskatt i Stockholm;2024;68,46199561;1521,285;;;;1553,76499404;7,07;35,98200157
+22;Kommunikationer;2201012;Transportstyrelsen;2024;-21,00064614;2535,914;1036;;;3552,17383567;76,106;-1,26048181
+22;Kommunikationer;2201013;Trafikanalys;2024;3,21809001;72,828;;-1,45;;73,06165061;2,118;1,5344394
+22;Kommunikationer;2201014;Trängselskatt i Göteborg;2024;31,01476304;760,435;;;;771,41492977;7,347;20,03483327
+22;Kommunikationer;2201015;Sjöfartsstöd;2024;211,66102;1500;;-211,66102;;1417,864839;;82,135161
+23;Areella näringar;2301001;Skogsstyrelsen;2023;-15,234;425,678;123;;;534,789;12,345;-2,567
+23;Areella näringar;2301002;Jordbruksverket;2023;125,789;2345,678;;;;2456,789;45,678;78,901
+24;Näringsliv;2401001;Tillväxtverket;2022;-45,678;1234,567;234;;;1345,678;23,456;-12,345
+24;Näringsliv;2401002;Vinnova;2022;234,567;3456,789;;;;3567,890;67,890;123,456
+24;Näringsliv;2401003;Patent- och registreringsverket;2022;0;156,789;;;;156,789;0;0
+25;Allmän miljö- och naturvård;2501001;Naturvårdsverket;2024;567,890;2345,678;;;;2456,789;89,012;456,789
+25;Allmän miljö- och naturvård;2501002;Kemikalieinspektionen;2024;0;234,567;;;;234,567;0;0
+26;Försvar;2601001;Förbandsverksamhet;2024;12345,678;45678,901;;;;46789,012;78,901;10234,567
+26;Försvar;2601002;Materiel och anläggningar;2024;8901,234;34567,890;;;;35678,901;56,789;7890,123
+27;Rikets styrelse;2701001;Kungliga hov- och slottsstaten;2024;0;145,678;;;;145,678;0;0`;
+            
+            document.getElementById('loading').style.display = 'block';
+            
+            setTimeout(() => {
+                allData = parseCSV(exampleCSV);
+                updateYearSelector(allData);
+                currentData = allData;
+                updateVisualization();
+                document.getElementById('loading').style.display = 'none';
+            }, 100);
+        });
+        
+        // Initiera med tom sammanfattning
+        showSummary([]);
+        showCategories([]);
+        
+        // Visa initial hjälptext
+        d3.select("#tree-container").html(`
+            <div style="text-align: center; padding: 50px; color: #666;">
+                <h3>Välkommen till Ekonomisk Budgetanalys</h3>
+                <p style="margin: 20px 0;">Ladda upp en CSV-fil eller klicka på "Ladda exempeldata" för att börja.</p>
+                <p style="font-size: 14px;">Alla belopp visas i miljoner kronor.</p>
+            </div>
+        `);
+// ========== ZOOM FUNKTIONALITET - LÄGG TILL I SLUTET ==========
+// Denna kod hittar automatiskt trädet och lägger till zoom
+
+// Vänta tills DOM är laddad
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Skapa zoom-kontroller om de inte finns
+    if (!document.querySelector('.zoom-controls')) {
+        const treeContainer = document.getElementById('tree-container');
+        if (treeContainer) {
+            const zoomControls = document.createElement('div');
+            zoomControls.className = 'zoom-controls';
+            zoomControls.innerHTML = `
+                <button id="zoom-in" title="Zooma in">+</button>
+                <button id="zoom-out" title="Zooma ut">-</button>
+                <button id="zoom-fit" title="Anpassa zoom">⤢</button>
+            `;
+            zoomControls.style.cssText = `
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+                z-index: 100;
+            `;
+            
+            // Stil för knapparna
+            const buttonStyle = `
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+                padding: 0;
+                background-color: #3498db;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                transition: background-color 0.3s;
+            `;
+            
+            zoomControls.querySelectorAll('button').forEach(btn => {
+                btn.style.cssText = buttonStyle;
+                btn.onmouseover = function() { this.style.backgroundColor = '#2980b9'; };
+                btn.onmouseout = function() { this.style.backgroundColor = '#3498db'; };
+            });
+            
+            treeContainer.appendChild(zoomControls);
+            treeContainer.style.position = 'relative';
+        }
+    }
+    
+    // Modifiera befintlig createTreeView funktion
+    const originalCreateTreeView = window.createTreeView;
+    window.createTreeView = function(data) {
+        // Anropa original funktionen
+        if (originalCreateTreeView) {
+            originalCreateTreeView.call(this, data);
+        }
+        
+        // Lägg till zoom efter att trädet skapats
+        setTimeout(() => {
+            const svg = d3.select("#tree-container svg");
+            const g = svg.select("g");
+            
+            if (svg.node() && g.node()) {
+                // Skapa zoom behavior
+                const zoom = d3.zoom()
+                    .scaleExtent([0.1, 4])
+                    .on("zoom", (event) => {
+                        g.attr("transform", event.transform);
+                    });
+                
+                // Applicera zoom på SVG
+                svg.call(zoom);
+                
+                // Zoom in
+                d3.select("#zoom-in").on("click", () => {
+                    svg.transition().duration(300).call(zoom.scaleBy, 1.3);
+                });
+                
+                // Zoom ut
+                d3.select("#zoom-out").on("click", () => {
+                    svg.transition().duration(300).call(zoom.scaleBy, 0.7);
+                });
+                
+                // Återställ zoom
+                d3.select("#zoom-fit").on("click", () => {
+                    const bounds = g.node().getBBox();
+                    const fullWidth = svg.node().clientWidth;
+                    const fullHeight = svg.node().clientHeight;
+                    const width = bounds.width;
+                    const height = bounds.height;
+                    const midX = bounds.x + width / 2;
+                    const midY = bounds.y + height / 2;
+                    
+                    const scale = 0.9 / Math.max(width / fullWidth, height / fullHeight);
+                    const translate = [fullWidth / 2 - scale * midX, fullHeight / 2 - scale * midY];
+                    
+                    svg.transition().duration(750).call(
+                        zoom.transform,
+                        d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
+                    );
+                });
+                
+                // Lägg till pan & zoom med mus
+                svg.on("wheel.zoom", null);
+                svg.call(zoom).on("wheel.zoom", (event) => {
+                    event.preventDefault();
+                    const currentZoom = d3.zoomTransform(svg.node());
+                    const factor = event.deltaY > 0 ? 0.9 : 1.1;
+                    const targetZoom = currentZoom.k * factor;
+                    
+                    const [x, y] = d3.pointer(event, svg.node());
+                    svg.transition().duration(100).call(
+                        zoom.scaleTo,
+                        targetZoom,
+                        [x, y]
+                    );
+                });
+                
+                // Keyboard shortcuts
+                d3.select("body").on("keydown", (event) => {
+                    if (event.target.tagName !== 'INPUT') {
+                        if (event.key === '+' || event.key === '=') {
+                            svg.transition().duration(300).call(zoom.scaleBy, 1.3);
+                        } else if (event.key === '-' || event.key === '_') {
+                            svg.transition().duration(300).call(zoom.scaleBy, 0.7);
+                        } else if (event.key === '0') {
+                            d3.select("#zoom-fit").dispatch('click');
+                        }
+                    }
+                });
+            }
+        }, 100);
+    };
+});
+    </script>
+</body>
+</html>
+            

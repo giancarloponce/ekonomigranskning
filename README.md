@@ -3,7 +3,7 @@ En html sida som visualiserar csv till träddiagram. Datan som används är stat
 
 
 Skulle vara grymt om det gick att vidareutveckla för att granska hela Sveriges ekonomi i detalj så att varenda medborgare kan se vad våra skattepengar används till. Vad händer med 	
-name	"Nystartsjobb, etableringsjobb och stöd för yrkesintroduktionsanställningar: 3 318,25 mkr" Vilka program/företag går de till?  	"Nystartsjobb, etableringsjobb och stöd för yrkesintroduktionsanställningar: 3 318,25 mkr , vilka företag går de till? 
+name	"Kostnader för arbetsmarknadspolitiska program och insatser: 609,86 mkr" Vilka program/företag går de till?  	"Nystartsjobb, etableringsjobb och stöd för yrkesintroduktionsanställningar: 3 318,25 mkr , vilka företag går de till? 
 
 Det finns en massa frågor som borde vara tillgängliga för det svenska folket öppet och enkelt att granska. Men det verkar inte finnas i detalj. 
 

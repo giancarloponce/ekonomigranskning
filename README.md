@@ -15,6 +15,6 @@ name	"Kostnader för arbetsmarknadspolitiska program och insatser: 609,86 mkr" V
 
 Det finns en massa frågor som borde vara tillgängliga för det svenska folket öppet och enkelt att granska. Men det verkar inte finnas i detalj. 
 
-Istället för att slösa pengar på ett projekt såsom northvolt så borde staten åtmistone ordna med enklare insyn för det svenska folket i vad de faktiskt får för sina skattepengar. 
+Istället för att slösa pengar på ett projekt såsom northvolt så borde staten åtmistone ordna med enklare insyn för det svenska folket att följa hur deras skattepengar spenderas.
 
 källa: https://www.esv.se/statistik-och-data/statistik/tidsserier-statens-budget-m.m/sveriges-officiella-statistik/
